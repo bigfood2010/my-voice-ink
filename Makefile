@@ -2,8 +2,13 @@
 DEPS_DIR := $(HOME)/VoiceInk-Dependencies
 WHISPER_CPP_DIR := $(DEPS_DIR)/whisper.cpp
 FRAMEWORK_PATH := $(WHISPER_CPP_DIR)/build-apple/whisper.xcframework
+CI_DERIVED_DATA_DIR := $(CURDIR)/.ci-derived-data
+BUILD_DIR := $(CURDIR)/build
+CI_APP_PATH := $(BUILD_DIR)/VoiceInk.app
+DMG_PATH := $(BUILD_DIR)/VoiceInk.dmg
+PACKAGE_DMG_SCRIPT := $(CURDIR)/scripts/package-dmg.sh
 
-.PHONY: all clean whisper setup build local check healthcheck help dev run
+.PHONY: all clean whisper setup build local ci-local-app dmg check healthcheck help dev run
 
 # Default target
 all: check build
@@ -42,6 +47,37 @@ setup: whisper
 
 build: setup
 	xcodebuild -project VoiceInk.xcodeproj -scheme VoiceInk -configuration Debug CODE_SIGN_IDENTITY="" build
+
+# Build a deterministic app bundle for CI/local release packaging
+ci-local-app: check setup
+	@echo "Building VoiceInk.app for CI packaging..."
+	@mkdir -p "$(BUILD_DIR)"
+	@rm -rf "$(CI_DERIVED_DATA_DIR)" "$(CI_APP_PATH)"
+	xcodebuild -project VoiceInk.xcodeproj -scheme VoiceInk -configuration Debug \
+		-derivedDataPath "$(CI_DERIVED_DATA_DIR)" \
+		-xcconfig LocalBuild.xcconfig \
+		CODE_SIGN_IDENTITY="-" \
+		CODE_SIGNING_REQUIRED=NO \
+		CODE_SIGNING_ALLOWED=YES \
+		DEVELOPMENT_TEAM="" \
+		CODE_SIGN_ENTITLEMENTS="$(CURDIR)/VoiceInk/VoiceInk.local.entitlements" \
+		SWIFT_ACTIVE_COMPILATION_CONDITIONS='$$(inherited) LOCAL_BUILD' \
+		build
+	@APP_PATH="$(CI_DERIVED_DATA_DIR)/Build/Products/Debug/VoiceInk.app" && \
+	if [ -d "$$APP_PATH" ]; then \
+		ditto "$$APP_PATH" "$(CI_APP_PATH)"; \
+		xattr -cr "$(CI_APP_PATH)"; \
+		echo "App ready at: $(CI_APP_PATH)"; \
+	else \
+		echo "Error: Could not find VoiceInk.app in CI derived data."; \
+		exit 1; \
+	fi
+
+# Package the CI app bundle into a compressed DMG
+dmg: ci-local-app
+	@echo "Packaging DMG..."
+	@"$(PACKAGE_DMG_SCRIPT)" "$(CI_APP_PATH)" "$(DMG_PATH)"
+	@echo "DMG ready at: $(DMG_PATH)"
 
 # Build for local use without Apple Developer certificate
 local: check setup
@@ -93,7 +129,7 @@ run:
 # Cleanup
 clean:
 	@echo "Cleaning build artifacts..."
-	@rm -rf $(DEPS_DIR)
+	@rm -rf $(DEPS_DIR) $(BUILD_DIR) $(CI_DERIVED_DATA_DIR)
 	@echo "Clean complete"
 
 # Help
@@ -104,6 +140,8 @@ help:
 	@echo "  setup              Copy whisper XCFramework to VoiceInk project"
 	@echo "  build              Build the VoiceInk Xcode project"
 	@echo "  local              Build for local use (no Apple Developer certificate needed)"
+	@echo "  ci-local-app       Build VoiceInk.app at ./build/VoiceInk.app for CI/release packaging"
+	@echo "  dmg                Build VoiceInk.dmg at ./build/VoiceInk.dmg"
 	@echo "  run                Launch the built VoiceInk app"
 	@echo "  dev                Build and run the app (for development)"
 	@echo "  all                Run full build process (default)"
