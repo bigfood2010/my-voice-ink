@@ -35,6 +35,8 @@ make dev
 - `make setup` - Prepare the whisper framework for linking
 - `make build` - Build the VoiceInk Xcode project
 - `make local` - Build for local use (no Apple Developer certificate needed)
+- `make ci-local-app` - Build `build/VoiceInk.app` for CI/release packaging
+- `make dmg` - Build `build/VoiceInk.dmg` from the local build profile
 - `make run` - Launch the built VoiceInk app
 - `make dev` - Build and run (ideal for development workflow)
 - `make all` - Complete build process (default)
@@ -75,6 +77,30 @@ The `make local` command uses:
 - `LOCAL_BUILD` Swift compilation flag for conditional code paths
 
 Your normal `make all` / `make build` commands are completely unaffected.
+
+---
+
+## Publish DMG to GitHub Releases
+
+This repository can publish a downloadable DMG automatically from Git tags via GitHub Actions.
+
+### Release Commands
+
+```bash
+git tag vX.YY
+git push origin vX.YY
+```
+
+### Expected Result
+
+Pushing a `v*` tag triggers `.github/workflows/release-dmg.yml`, which:
+- builds `build/VoiceInk.dmg`
+- generates `build/VoiceInk.dmg.sha256`
+- uploads both files to the matching GitHub Release
+
+### Current Limitation
+
+The automated DMG currently uses the local/ad-hoc signing profile (`LOCAL_BUILD`) for easier setup. This is intended for downloadable release assets and can be upgraded later to full Apple signing + notarization.
 
 ---
 
