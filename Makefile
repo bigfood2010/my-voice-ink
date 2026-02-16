@@ -67,7 +67,7 @@ ci-local-app: check setup
 		CODE_SIGNING_ALLOWED=YES \
 		DEVELOPMENT_TEAM="" \
 		CODE_SIGN_ENTITLEMENTS="$(CURDIR)/VoiceInk/VoiceInk.local.entitlements" \
-		SWIFT_ACTIVE_COMPILATION_CONDITIONS='$$(inherited) LOCAL_BUILD' \
+		SWIFT_ACTIVE_COMPILATION_CONDITIONS='DEBUG LOCAL_BUILD' \
 		build
 	@APP_PATH="$(CI_DERIVED_DATA_DIR)/Build/Products/Debug/VoiceInk.app" && \
 	if [ -d "$$APP_PATH" ]; then \
@@ -95,7 +95,7 @@ local: check setup
 		CODE_SIGNING_ALLOWED=YES \
 		DEVELOPMENT_TEAM="" \
 		CODE_SIGN_ENTITLEMENTS="$(CURDIR)/VoiceInk/VoiceInk.local.entitlements" \
-		SWIFT_ACTIVE_COMPILATION_CONDITIONS='$$(inherited) LOCAL_BUILD' \
+		SWIFT_ACTIVE_COMPILATION_CONDITIONS='DEBUG LOCAL_BUILD' \
 		build
 	@APP_PATH=$$(find "$$HOME/Library/Developer/Xcode/DerivedData" -name "VoiceInk.app" -path "*/Debug/*" -type d | head -1) && \
 	if [ -n "$$APP_PATH" ]; then \
